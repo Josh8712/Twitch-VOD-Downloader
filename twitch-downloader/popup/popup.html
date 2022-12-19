@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Twitch VOD Downloader</title>
+    <script type="text/javascript" src="popup.js"></script>
+</head>
+  <body>
+    <h1> 執行狀態 </h1>
+    <p id="status">  </p>
+    <div class="loader"></div>
+    <p>  </p>
+    <button disabled> 前往頁面 </button>
+  </body>
+  <style>
+    body 
+    { 
+        min-width: 100px;
+        text-align: center;
+        padding: 0px 10px 10px 10px;
+    }
+    .loader {
+        border: 10px solid #f3f3f3; /* Light grey */
+        border-top: 10px solid #3498db; /* Blue */
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 2s linear infinite;
+        margin: auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    button {
+        border: none; /* Remove borders */
+        color: white; /* Add a text color */
+        padding: 6px 8px; /* Add some padding */
+        border-radius: 5px;
+        background-color: #4fa384;
+        cursor: pointer; /* Add a pointer cursor on mouse-over */
+    }
+    button[disabled] {
+      background-color: gray;
+      opacity: 0.5;
+    }
+  </style>
+</html>

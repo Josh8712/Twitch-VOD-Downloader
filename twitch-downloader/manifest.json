@@ -1,0 +1,43 @@
+{
+    "manifest_version": 3,
+    "name": "Twitch VOD Downloader",
+    "description": "VOD Downloader",
+    "version": "1.0",
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApjkqbv1dy7cUU8uyb+eRMAnUF+TZg6utDgbSzNI4Cn70eNaQXKiWthKKdKiXHApsNFpbCYIs9qHqXMQ2lwqxslKNJFwN21k1/RnRzEBKcfOJlm3MW+ryLnO7cpWZSB7kCoAMw2vg0NBquBO1uaF4nb5YRbOVtQkcLmPubVBtGd07tpP+weuC0M4FKUEQUV6AiJp/G+YZhMSIw+oY5UWTZCjksmFjcJfuAIJFBHqgquJQeUAFhhn3ZZ1mHBvSvMamc4aE4ZhOHqOgwiqn9CRHqRfGUslv/SufpVsY8dlHLxZTzWad5OP9uy8kJ7JpxvqWNBzmOpZzAlL6q9h9AETsdwIDAQAB",
+    "action": {
+      "default_popup": "popup/popup.html"
+    },
+    "background": {  
+      "service_worker": "background.js"
+    },  
+    "host_permissions": [
+      "*://*.net/*",
+      "*://*.tv/*",
+      "*://*.tw/*",
+      "*://*.com/*",
+      "*://127.0.0.1/*",
+      "*://clalmipngagbenbolclhinppjkincghn.chromiumapp.org/*"
+    ],
+    "permissions": [
+      "background", 
+      "notifications",
+      "alarms",
+      "storage",
+      "tabs",
+      "cookies",
+      "webRequest",
+      "identity"
+    ],
+    "oauth2": {
+      "client_id": "981220008427-vgjkqepmhcvc7o7oc8ljg0fq2qesgo07.apps.googleusercontent.com",
+      "scopes": [
+        "https://www.googleapis.com/auth/drive.file"
+      ]
+    },
+    "content_scripts": [
+      {
+          "matches": ["https://*.twitch.tv/*"],
+          "js": ["content/click.js"]
+      }
+    ]
+}

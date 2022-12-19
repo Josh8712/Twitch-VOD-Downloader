@@ -1,0 +1,645 @@
+var longToByteArray = function (value) {
+    // we want to represent the input as a 8-bytes array
+    var byteArray = [0, 0, 0, 0, 0, 0, 0, 0];
+
+    for (var index = 0; index < byteArray.length; index++) {
+        var byte = value & 0xff;
+        byteArray[byteArray.length - index - 1] = byte;
+        value = (value - byte) / 256;
+    }
+
+    return byteArray;
+};
+
+var secondsToString = function (second) {
+    var date = new Date(0);
+    date.setSeconds(second);
+    return date.toISOString().substring(11, 19)
+}
+
+class Decoder {
+    constructor(pendingWritable, folder_handler, output_type, max_download_length = -1) {
+        this.pendingWritable = pendingWritable
+        this.folder_handler = folder_handler;
+        this.file_handler = null
+        this.writableStream = null
+
+        this.hls_url = null
+        this.output_type = output_type
+
+        this.current_time = null
+        this.total_duration = 0
+        this.finished = false
+
+        this.transmuxer = null;
+        this.flush_promise_resolve = null;
+
+        this.has_pushed = false
+        this.total_bytes_count = 0
+        this.init_bytes = new Uint8Array()
+        this.discontinue = false
+
+        this.interrupted = null
+        this.max_download_length = max_download_length
+
+        // preview
+        this.sourceBuffer = null
+        this.previewBuffer = []
+    }
+
+    run(hls_url) {
+        this.hls_url = hls_url
+        return this.create_file()
+            .then(() => {
+                return this.start_download()
+            })
+    }
+
+    reset() {
+        this.file_handler = null
+        this.writableStream = null
+
+        this.total_duration = 0
+        this.transmuxer = null;
+        this.flush_promise_resolve = null;
+        this.has_pushed = false
+        this.total_bytes_count = 0
+        this.init_bytes = new Uint8Array()
+        this.discontinue = false
+        this.close_previewsource()
+    }
+
+    // decoder
+    init_decoder() {
+        var _this = this
+        if (this.output_type == 'mp4') {
+            this.transmuxer = new Transmuxer({
+                remux: true
+            });
+        } else {
+            this.transmuxer = new RawDecoder()
+        }
+        try {
+            if (this.output_type == 'mp4') {
+                var mediaSource = new MediaSource()
+                this.mediaSource = mediaSource
+                var video = document.querySelector('video')
+                video.src = URL.createObjectURL(mediaSource)
+                mediaSource.addEventListener('sourceopen', sourceOpen);
+
+                function sourceOpen() {
+                    try {
+                        var mime = 'video/mp4; codecs="avc1.64002A,mp4a.40.2"'
+                        _this.sourceBuffer = mediaSource.addSourceBuffer(mime);
+                        _this.setup_preview()
+                    } catch (e) {
+                        push_error(e)
+                        _this.sourceBuffer = null
+                    }
+                }
+                document.getElementById('nopreview').style.display = "none"
+                document.getElementById('preview').style.display = ""
+            } else {
+                document.getElementById('nopreview').style.display = ""
+                document.getElementById('preview').style.display = "none"
+            }
+        } catch (e) {
+            push_error(e)
+            _this.sourceBuffer = null
+        }
+        this.init_history()
+    }
+
+    init_history() {
+        this.historyBytes = {
+            video: {
+                stts: {
+                    bytes: []
+                },
+                stss: {
+                    bytes: []
+                },
+                ctts: {
+                    bytes: []
+                },
+                stsc: {
+                    bytes: []
+                },
+                stsz: {
+                    bytes: []
+                },
+                co64: {
+                    bytes: []
+                },
+                elst: {
+                    bytes: []
+                },
+            },
+            audio: {
+                stts: {
+                    bytes: []
+                },
+                stsc: {
+                    bytes: []
+                },
+                stsz: {
+                    bytes: []
+                },
+                co64: {
+                    bytes: []
+                },
+                elst: {
+                    bytes: []
+                },
+            },
+            total_duration: 0,
+            count: 16,
+            mdatHead: 0
+        }
+    }
+
+    // preview
+    setup_preview() {
+        var _this = this
+        var seekbar = document.getElementById("preview_seekbar")
+        var video = document.querySelector('video')
+        video.onseeked = function (e) {
+            try {
+                if (_this.sourceBuffer.buffered.length > 0) {
+                    if (e.target.currentTime < _this.sourceBuffer.buffered.start(0)) {
+                        e.target.currentTime = _this.sourceBuffer.buffered.start(0) + 1
+                    } else if (e.target.currentTime > _this.sourceBuffer.buffered.end(0)) {
+                        e.target.currentTime = _this.sourceBuffer.buffered.end(0) - 1
+                    }
+                }
+            } catch (e) {
+                push_error(e)
+                _this.sourceBuffer = null
+            }
+        }
+        var start = false
+        seekbar.onchange = function (e) {
+            video.currentTime = e.target.value
+        }
+        this.sourceBuffer.addEventListener('updateend', function () {
+            try {
+                if (_this.sourceBuffer.buffered.length == 1) {
+                    if (!start) {
+                        start = true
+                        video.currentTime = _this.sourceBuffer.buffered.end(0) - 1
+                    }
+                    if (_this.sourceBuffer.buffered.end(0) - _this.sourceBuffer.buffered.start(0) > 60) {
+                        _this.sourceBuffer.remove(0, _this.sourceBuffer.buffered.end(0) - 60)
+                        if (video.currentTime < _this.sourceBuffer.buffered.start(0)) {
+                            video.currentTime = _this.sourceBuffer.buffered.start(0) + 5
+                        }
+                    }
+                    var old_val = parseInt(seekbar.value)
+                    var old_max = parseInt(seekbar.max)
+                    var new_min = parseInt(_this.sourceBuffer.buffered.start(0))
+                    var new_max = parseInt(_this.sourceBuffer.buffered.end(0))
+                    seekbar.min = new_min
+                    seekbar.max = new_max
+                    if (old_val >= old_max)
+                        seekbar.value = new_max + 1
+                    else if (old_val <= new_min)
+                        seekbar.value = new_min
+
+                    document.getElementById("start_preview").innerText = secondsToString(new_min)
+                    document.getElementById("end_preview").innerText = secondsToString(new_max)
+
+                }
+                if (_this.previewBuffer.length > 0 && !_this.sourceBuffer.updating) {
+                    _this.sourceBuffer.appendBuffer(_this.previewBuffer.shift());
+                }
+            } catch (e) {
+                push_error(e)
+                _this.sourceBuffer = null
+            }
+        });
+    }
+
+    setup_decoder() {
+        var _this = this
+        var remuxedSegments = [];
+        var remuxedBytesLength = 0;
+        var remuxedInitSegment = null;
+        var start = false
+
+        this.transmuxer.on('data', function (segment) {
+            try {
+                if (_this.sourceBuffer) {
+                    if (!start) {
+                        start = true
+                        _this.previewBuffer.push(segment.preview_initSegment)
+                    }
+                    _this.previewBuffer.push(segment.preview)
+                    if (!_this.sourceBuffer.updating) {
+                        _this.sourceBuffer.appendBuffer(_this.previewBuffer.shift());
+                    }
+                } else {
+                    _this.previewBuffer.length = 0
+                }
+            } catch (e) {
+                push_error(e)
+                _this.sourceBuffer = null
+            }
+
+            remuxedSegments.push(segment);
+            remuxedBytesLength += segment.data.byteLength;
+            remuxedInitSegment = segment.initSegment;
+        });
+
+        this.transmuxer.on('done', function () {
+            var flush_promise_resolve = _this.flush_promise_resolve
+            _this.flush_promise_resolve = null
+            if (remuxedBytesLength == 0 || remuxedInitSegment == null) {
+                if (flush_promise_resolve != null)
+                    flush_promise_resolve()
+                return
+            }
+            var bytes = new Uint8Array(remuxedBytesLength)
+
+            var init_bytes = new Uint8Array(remuxedInitSegment.byteLength)
+            init_bytes.set(remuxedInitSegment, 0);
+            for (var j = 0, i = 0; j < remuxedSegments.length; j++) {
+                bytes.set(remuxedSegments[j].data, i);
+                i += remuxedSegments[j].byteLength;
+            }
+            remuxedSegments = [];
+            remuxedBytesLength = 0;
+            remuxedInitSegment = null;
+            if (flush_promise_resolve != null)
+                flush_promise_resolve(_this.saveFile(init_bytes, bytes))
+        });
+    }
+    // create file
+    get_filename(idx = 0) {
+        var now = new Date();
+        var year = now.getFullYear();
+        var month = now.getMonth();
+        var date = now.getDate();
+        var hr = now.getHours();
+        var min = now.getMinutes();
+        var sec = now.getSeconds()
+
+        var filename = year
+        filename += "-" + ('0' + (month + 1)).slice(-2);
+        filename += "-" + ('0' + date).slice(-2);
+
+        filename += "_" + ('0' + hr).slice(-2);
+        filename += "-" + ('0' + min).slice(-2);
+        filename += "-" + ('0' + sec).slice(-2);
+        if (idx > 0)
+            filename += "-" + idx;
+        filename += "." + this.output_type
+        return filename
+    }
+
+    _create_file(idx = 0) {
+        var filename = this.get_filename(idx)
+        return this.folder_handler.getFileHandle(filename)
+            .then(() => {
+                return _create_file(idx + 1)
+            })
+            .catch((e) => {
+                if (e.name == "NotFoundError") {
+                    return this.folder_handler.getFileHandle(filename, {
+                            create: true
+                        })
+                        .then((file_handler) => {
+                            this.file_handler = file_handler
+                        })
+                }
+                throw e
+            })
+    }
+
+    create_file() {
+        this.reset()
+        return this._create_file()
+            .then(() => {
+                push_message("建立新影片")
+                return this.recreate_writable()
+            }).then(() => {
+                this.init_decoder()
+                this.setup_decoder()
+            })
+    }
+
+    recreate_writable() {
+        if (this.writableStream) {
+            return this.writableStream.close().then(() => {
+                this.writableStream = null
+                return this.recreate_writable()
+            });
+        } else
+            return this.file_handler.createWritable({
+                    keepExistingData: true
+                })
+                .then((writableStream) => {
+                    this.writableStream = writableStream
+                })
+    }
+    // download
+    download_loop(resolve) {
+        var _this = this
+        this.refresh_hls()
+            .then(raw_hls => {
+                return this.parse_hls(raw_hls)
+            }).then(ts_list => {
+                return this.process_ts(ts_list, 0)
+            }).then(() => {
+                return this.flush()
+            }).then(() => {
+                if (this.finished || this.interrupted) {
+                    resolve()
+                } else
+                    setTimeout(function () {
+                        _this.download_loop(resolve)
+                    }, 3000)
+            }).catch(e => {
+                push_error(e || "下載發生錯誤")
+                resolve();
+            })
+    }
+    start_download() {
+        return new Promise((resolve, reject) => {
+            this.download_loop(resolve)
+        }).then(() => {
+            return this.closeFile();
+        })
+    }
+    // step get hls
+    parse_hls(raw_hls) {
+        var ts_list = []
+        var lines = raw_hls.split("\n")
+        var date_time = null
+        var duration = null
+        var segment_type = null
+        var has_discontinue = false
+        for (var idx = 0; idx < lines.length; idx++) {
+            var i = lines[idx]
+            if (i.startsWith("#EXT-X-PROGRAM-DATE-TIME"))
+                date_time = i
+            else if (i.startsWith("#EXTINF"))
+                duration = i
+            else if (i.startsWith("#EXT-X-DISCONTINUITY"))
+                has_discontinue = true
+            else if (i.startsWith("#EXT-X-ENDLIST")) {
+                push_message("直播已結束")
+                this.finished = true
+                break
+            } else if (!i.startsWith("#")) {
+                if (date_time && duration) {
+                    var pos = date_time.indexOf(':')
+                    if (pos > 0) {
+                        date_time = date_time.slice(pos + 1)
+                        date_time = Date.parse(date_time)
+                        pos = duration.indexOf(':')
+                        if (pos > 0) {
+                            duration = duration.slice(pos + 1)
+                            pos = duration.indexOf(',')
+                            if (pos > 0) {
+                                duration = duration.slice(0, pos)
+                                segment_type = duration.slice(0, pos + 1)
+                            }
+                            duration = parseFloat(duration)
+                            if (this.current_time == null || date_time > this.current_time) {
+                                if (has_discontinue && (this.has_pushed || ts_list.length > 0)) {
+                                    this.discontinue = true
+                                    if (segment_type != 'live')
+                                        push_message("偵測到廣告")
+                                    break
+                                }
+                                ts_list.push({
+                                    'date_time': date_time,
+                                    'duration': duration,
+                                    'url': i
+                                })
+                            }
+                        }
+                    }
+                }
+                has_discontinue = false
+                date_time = null
+                duration = null
+            }
+        }
+        return ts_list
+    }
+    refresh_hls(retry = 0) {
+        var _this = this
+        var url = this.hls_url
+        return new Promise((resolve, reject) => {
+            if (retry >= 3)
+                throw new Error("無法取得影片列表")
+            var req = new XMLHttpRequest()
+            req.open("GET", url)
+            req.onreadystatechange = function () {
+                try {
+                    if (req.readyState == 4) {
+                        if (req.status == 200) {
+                            resolve(req.responseText)
+                        } else {
+                            setTimeout(function () {
+                                resolve(_this.refresh_hls(retry + 1))
+                            }, 1000)
+                        }
+                    }
+                } catch {
+                    setTimeout(function () {
+                        resolve(_this.refresh_hls(retry + 1))
+                    }, 1000)
+                }
+            }
+            req.send()
+        });
+    }
+    // step ts
+    write_ts(response) {
+        var segment = new Uint8Array(response);
+        if (window.debugFolder) {
+            debugFolder.nameidx += 1
+            debugFolder.getFileHandle(debugFolder.nameidx + ".ts", {
+                    create: true
+                })
+                .then(h => {
+                    return h.createWritable()
+                }).then(r => {
+                    return r.write(response)
+                        .then(() => {
+                            r.close()
+                        })
+                })
+        }
+        this.transmuxer.push(segment);
+        this.has_pushed = true;
+    }
+    process_ts(ts_list, idx, retry = 0) {
+        var _this = this
+        if (idx >= ts_list.length)
+            return
+        var ts = ts_list[idx]
+        var date_time = ts['date_time']
+        var duration = ts['duration']
+        var url = ts['url']
+        if (this.current_time != null && this.current_time >= date_time) {
+            return this.process_ts(ts_list, idx + 1)
+        }
+        if (retry >= 2) {
+            if (this.current_time != null) {
+                this.current_time = date_time
+                this.total_duration += duration
+            }
+            push_error("無法下載片段 (略過)")
+            return this.process_ts(ts_list, idx + 1)
+        }
+        return new Promise((resolve, reject) => {
+            var req = new XMLHttpRequest()
+            req.open("GET", url)
+            req.responseType = "arraybuffer";
+            req.onreadystatechange = function () {
+                try {
+                    if (req.readyState == 4) {
+                        if (req.status == 200) {
+                            _this.write_ts(req.response)
+                            _this.current_time = date_time
+                            _this.total_duration += duration
+                            resolve(_this.process_ts(ts_list, idx + 1))
+                        } else {
+                            setTimeout(function () {
+                                resolve(_this.process_ts(ts_list, idx, retry + 1))
+                            }, 1000)
+                        }
+                    }
+                } catch (e) {
+                    reject(e)
+                }
+            }
+            req.send()
+        })
+    }
+    // step flush
+    flush() {
+        if (!this.has_pushed)
+            return
+        return new Promise((resolve, reject) => {
+                var date = new Date(0);
+                date.setSeconds(this.total_duration);
+                set_status("已處理 " + date.toISOString().substring(11, 19) + " 秒")
+
+                this.flush_promise_resolve = resolve
+                this.transmuxer.flush(this.historyBytes)
+                if (this.flush_promise_resolve) {
+                    this.flush_promise_resolve = null
+                    resolve()
+                }
+            })
+            .then(() => {
+                if (this.max_download_length > 0 &&
+                    this.total_duration > this.max_download_length) {
+                    this.discontinue = true
+                }
+            }).then(() => {
+                if (this.discontinue) {
+                    this.discontinue = false
+                    return this.closeFile().then(() => {
+                        return this.create_file()
+                    })
+                }
+            })
+    }
+    // step save
+    saveFile(init_bytes, bytes) {
+        return this.writableStream.write({
+            type: "write",
+            data: new Uint8Array([0x00, 0x00, 0x00, 0x01, 0x6d, 0x64, 0x61, 0x74].concat(longToByteArray(this.total_bytes_count + 8 + 8 + bytes.length))),
+            position: 0
+        }).then(() => {
+            return this.writableStream.write({
+                type: "write",
+                data: bytes,
+                position: 8 + 8 + this.total_bytes_count
+            })
+        }).then(() => {
+            this.total_bytes_count += bytes.length
+            this.init_bytes = init_bytes
+        })
+    }
+    // step close
+    _closeFile() {
+        var file_handler = this.file_handler
+        return this.writableStream.close()
+            .then(() => {
+                return file_handler
+            })
+    }
+
+    getCurrentFilename() {
+        return this.file_handler.name
+    }
+
+    close_previewsource() {
+        try {
+            if (this.mediaSource) {
+                this.previewBuffer.length = 0
+                try {
+                    this.mediaSource.endOfStream()
+                    this.mediaSource = null
+                } catch (e) {
+                }
+            }
+        } catch (e) {
+            push_error(e)
+        }
+    }
+
+    closeFile() {
+        this.close_previewsource()
+        var date = new Date(0);
+        var filename = this.getCurrentFilename()
+        date.setSeconds(this.total_duration);
+        push_message(`輸出檔案 - ${filename} (${date.toISOString().substring(11, 19)})`)
+        set_status("檔案輸出中，請稍後，請勿離開此頁面")
+        return this.writableStream.write({
+            type: "write",
+            data: this.init_bytes,
+            position: this.total_bytes_count + 16 - this.historyBytes.mdatHead
+        }).then(() => {
+            var total_bytes_count = this.total_bytes_count
+            var file_handler = this.file_handler
+            this.pendingWritable.push(file_handler)
+            this._closeFile()
+            .then((file_handler) => {
+                if (total_bytes_count == 0) {
+                    push_error("移除空影片 - " + filename)
+                    return this.deleteFile(file_handler)
+                } else
+                    return this.finishVideo(file_handler)
+            }).then(() => {
+                push_message("輸出完成 - " + filename)
+            }).catch(e => {
+                push_error(filename + " - " + e)
+            }).finally(()=>{
+                file_handler.output_finished = true
+            });
+            return
+        })
+    }
+    // step finish
+    deleteFile(file_handler) {
+        if (file_handler && this.folder_handler) {
+            return this.folder_handler.removeEntry(file_handler.name)
+        }
+    }
+
+    finishVideo() {
+        return
+    }
+
+    setInterrupt() {
+        this.interrupted = true
+        set_status("中斷錄影中")
+    }
+}
