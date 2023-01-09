@@ -8417,6 +8417,7 @@ li + li {
 {
   padding: 5px 20px;
   color: white;
+  word-break: keep-all;
 }
 
 #update p 

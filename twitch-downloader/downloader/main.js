@@ -42,12 +42,13 @@ document.addEventListener("DOMContentLoaded", function(){
     // misc
     document.getElementById("notes").addEventListener("click", showNotes);
     document.querySelector('.modal button[class=close]').addEventListener('click', closeModal);
+    document.getElementById("edit_clip").addEventListener("click", edit_clip);
     
     // storage
     // storage - local
     document.getElementById("dest").addEventListener("click", chooseDest);
     document.getElementById("dest_text").addEventListener("click", chooseDest);
-    document.getElementById("dest_text").addEventListener("keydown", preventKey);
+    document.getElementById("dest_text").addEventListener("keydown", preventKey);    
     // storage - cloud
     document.getElementById("youtube").addEventListener("click", authYoutube);
     document.getElementById("google").addEventListener("click", authGoogle);
@@ -395,4 +396,11 @@ function getStatusText() {
         return '等待設定'
     else 
         return downloader.getStatusText()
+}
+
+function edit_clip() {
+    if(downloader?.decoder)
+        downloader.decoder.setup_edit_clip()
+    else
+        showAlert("查無錄製中的直播")
 }

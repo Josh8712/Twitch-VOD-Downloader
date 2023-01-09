@@ -1,4 +1,4 @@
-var version = 'v0.0.1'
+var version = 'v0.0.2'
 var changeLogURL = "https://raw.githubusercontent.com/Josh8712/Twitch-VOD-Downloader/master/changelog"
 function chech_update() {
     fetch(changeLogURL + "?time=" + new Date().getTime())
@@ -24,10 +24,10 @@ function parseChange(body) {
         return
     var change = []
     for(var i = 0; i < lines.length; i++)
-        if(lines[i].length == 0) {
+        if(lines[i].trim().length == 0) {
             if(i + 2 >= lines.length)
                 break
-            if(lines[i + 1] == version)
+            if(lines[i + 1].trim() == version)
                 break
             i += 2
             continue

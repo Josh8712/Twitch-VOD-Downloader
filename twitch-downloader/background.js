@@ -249,50 +249,52 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
             } })
         })
     } else if ( message?.type == 'closing' ) {
-        return detectRunningPageExists()
-        .then(exists=>{
-            if (!exists) {
-                chrome.storage.local.get('type')
-                .then(type=>{
-                    type = type?.type
-                    if(type == null)
-                        return
-                    chrome.storage.local.set({'isRunning': 1})
-                    if ( type == 'local' ) {
-                        chrome.notifications.clear("WarnClosed", function() {
-                            reopen = {
-                                title: "點此重新打開視窗",
-                            }
-                            cancel = {
-                                title: "點此取消背景檢查",
-                            }
-                            chrome.notifications.create("WarnClosed", {
-                                type: chrome.notifications.TemplateType.BASIC,
-                                iconUrl: "https://static-cdn.jtvnw.net/jtv_user_pictures/8aae7c4e-05f5-4d4f-b49a-dc28f6099fbb-profile_image-70x70.png",
-                                title: "VOD Downloader 已停止下載作業",
-                                message: "本地儲存需要頁面保持開啟，才能自動執行下載作業，僅能於背景檢查直播開始通知",
-                                buttons: [reopen, cancel],
-                                isClickable: true
-                            });
-                        })
-                    } else {
-                        chrome.notifications.clear("CancelInterrupt", function() {
-                            cancel = {
-                                title: "點此取消背景檢查",
-                            }
-                            chrome.notifications.create("CancelInterrupt", {
-                                type: chrome.notifications.TemplateType.BASIC,
-                                iconUrl: "https://static-cdn.jtvnw.net/jtv_user_pictures/8aae7c4e-05f5-4d4f-b49a-dc28f6099fbb-profile_image-70x70.png",
-                                title: "VOD Downloader 在背景執行檢查",
-                                message: "當直播開始時會自動執行錄影上傳",
-                                buttons: [cancel],
-                                isClickable: true
-                            });
-                        })
-                    }
-                })
-            }
-        }).catch(()=>{})
+        return setTimeout(()=>{
+            detectRunningPageExists()
+            .then(exists=>{
+                if (!exists) {
+                    chrome.storage.local.get('type')
+                    .then(type=>{
+                        type = type?.type
+                        if(type == null)
+                            return
+                        chrome.storage.local.set({'isRunning': 1})
+                        if ( type == 'local' ) {
+                            chrome.notifications.clear("WarnClosed", function() {
+                                reopen = {
+                                    title: "點此重新打開視窗",
+                                }
+                                cancel = {
+                                    title: "點此取消背景檢查",
+                                }
+                                chrome.notifications.create("WarnClosed", {
+                                    type: chrome.notifications.TemplateType.BASIC,
+                                    iconUrl: "https://static-cdn.jtvnw.net/jtv_user_pictures/8aae7c4e-05f5-4d4f-b49a-dc28f6099fbb-profile_image-70x70.png",
+                                    title: "VOD Downloader 已停止下載作業",
+                                    message: "本地儲存需要頁面保持開啟，才能自動執行下載作業，僅能於背景檢查直播開始通知",
+                                    buttons: [reopen, cancel],
+                                    isClickable: true
+                                });
+                            })
+                        } else {
+                            chrome.notifications.clear("CancelInterrupt", function() {
+                                cancel = {
+                                    title: "點此取消背景檢查",
+                                }
+                                chrome.notifications.create("CancelInterrupt", {
+                                    type: chrome.notifications.TemplateType.BASIC,
+                                    iconUrl: "https://static-cdn.jtvnw.net/jtv_user_pictures/8aae7c4e-05f5-4d4f-b49a-dc28f6099fbb-profile_image-70x70.png",
+                                    title: "VOD Downloader 在背景執行檢查",
+                                    message: "當直播開始時會自動執行錄影上傳",
+                                    buttons: [cancel],
+                                    isClickable: true
+                                });
+                            })
+                        }
+                    })
+                }
+            }).catch(()=>{})
+        }, 1000)
     } else if ( message?.type == 'open' ) {
         openPage(1, reply)
     } else if ( message?.type == 'restore' ) {
@@ -318,3 +320,4 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         success: false,
     } })
 });
+importScripts('editor-background.js');

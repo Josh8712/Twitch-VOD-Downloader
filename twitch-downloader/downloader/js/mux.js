@@ -1540,19 +1540,12 @@ _VideoSegmentStream$1 = function VideoSegmentStream(track, options) {
 
         nalUnits = [];
 
-        preview_mdat = mp4Generator.mdat(mdat);
-        preview_moof = mp4Generator.moof(0, [track]);
-        preview_boxes = new Uint8Array(preview_moof.byteLength + preview_mdat.byteLength); // Bump the sequence number for next time
-        preview_boxes.set(preview_moof);
-        preview_boxes.set(preview_mdat, preview_moof.byteLength);
-
         boxes = mdat
         track.dataByteLength = boxes.byteLength
         track.videoBytes = boxes.length
         this.trigger('data', {
             track: track,
-            boxes: boxes,
-            preview_boxes
+            boxes: boxes
         });
         this.trigger('baseMediaDecodeTime', track);
         this.resetStream_(); // Continue with the flush process now
@@ -2694,12 +2687,6 @@ _AudioSegmentStream$1 = function AudioSegmentStream(track, options) {
         track.samples = audioFrameUtils.generateSampleTable(frames); // concatenate the audio data to constuct the mdat
         mdat = audioFrameUtils.concatenateFrameData(frames);
 
-        preview_mdat = mp4Generator.mdat(mdat);
-        preview_moof = mp4Generator.moof(0, [track]);
-        preview_boxes = new Uint8Array(preview_moof.byteLength + preview_mdat.byteLength); // bump the sequence number for next time
-        preview_boxes.set(preview_moof);
-        preview_boxes.set(preview_mdat, preview_moof.byteLength);
-
         adtsFrames = [];
         trackDecodeInfo.clearDtsInfo(track);
 
@@ -2708,8 +2695,7 @@ _AudioSegmentStream$1 = function AudioSegmentStream(track, options) {
         track.audioBytes = boxes.length
         this.trigger('data', {
             track: track,
-            boxes: boxes,
-            preview_boxes: preview_boxes
+            boxes: boxes
         });
         this.trigger('done', 'AudioSegmentStream');
     };
@@ -2749,8 +2735,6 @@ _CoalesceStream = function CoalesceStream(options) {
     this.audioTrack = null;
     this.pendingBoxes = [];
     this.pendingBytes = 0;
-    this.pendingPreveiw = [];
-    this.pendingPreviewBytes = 0
     this.emittedTracks = 0;
     this.historyBytes = null
 
@@ -2764,7 +2748,6 @@ _CoalesceStream = function CoalesceStream(options) {
 
         this.pendingTracks.push(output.track);
         this.pendingBytes += output.boxes.byteLength; // TODO: is there an issue for this against chrome?
-        this.pendingPreviewBytes += output.preview_boxes.byteLength
         // We unshift audio and push video because
         // as of Chrome 75 when switching from
         // one init segment to another if the video
@@ -2774,13 +2757,11 @@ _CoalesceStream = function CoalesceStream(options) {
         if (output.track.type === 'video') {
             this.videoTrack = output.track;
             this.pendingBoxes.push(output.boxes);
-            this.pendingPreveiw.push(output.preview_boxes);
         }
 
         if (output.track.type === 'audio') {
             this.audioTrack = output.track;
             this.pendingBoxes.unshift(output.boxes);
-            this.pendingPreveiw.unshift(output.preview_boxes);
         }
     };
 };
@@ -2793,7 +2774,7 @@ _CoalesceStream.prototype.flush = function (flushSource) {
             metadata: [],
             info: {}
         },
-        initSegment, preview_initSegment,
+        initSegment,
         i;
 
     if (this.pendingTracks.length < this.numberOfTracks) {
@@ -2845,21 +2826,11 @@ _CoalesceStream.prototype.flush = function (flushSource) {
 
         this.emittedTracks += this.pendingTracks.length;
         initSegment = mp4Generator.initSegment(this.pendingTracks, this.historyBytes); // Create a new typed array to hold the init segment
-        preview_initSegment = mp4Generator.preview_initSegment(this.pendingTracks); // Create a new typed array to hold the init segment
 
         event.initSegment = new Uint8Array(initSegment.byteLength); // Create an init segment containing a moov
-        event.preview_initSegment = new Uint8Array(preview_initSegment.byteLength); // Create an init segment containing a moov
         // and track definitions
 
         event.initSegment.set(initSegment); // Create a new typed array to hold the moof+mdats
-        event.preview_initSegment.set(preview_initSegment); // Create a new typed array to hold the moof+mdats
-
-        event.preview = new Uint8Array(this.pendingPreviewBytes); // Append each moof+mdat (one per track) together
-        offset = 0
-        for (i = 0; i < this.pendingPreveiw.length; i++) {
-            event.preview.set(this.pendingPreveiw[i], offset);
-            offset += this.pendingPreveiw[i].byteLength;
-        }
 
         event.data = new Uint8Array(this.pendingBytes); // Append each moof+mdat (one per track) together
         offset = 0
@@ -2872,9 +2843,7 @@ _CoalesceStream.prototype.flush = function (flushSource) {
         this.videoTrack = null;
         this.audioTrack = null;
         this.pendingBoxes.length = 0;
-        this.pendingPreveiw.length = 0;
         this.pendingBytes = 0;
-        this.pendingPreviewBytes = 0
         this.trigger('data', event);
     } // Only emit `done` if all tracks have been flushed and emitted
 
@@ -2947,7 +2916,7 @@ var numbers = {
 };
 
 var MAX_UINT32 = numbers.MAX_UINT32;
-var preview_mdia, preview_minf, preview_stbl, preview_trak, box, dinf, esds, ftyp, mdat, mfhd, minf, moof, moov, preview_moov, mvex, mvhd, trak, tkhd, mdia, mdhd, hdlr, sdtp, stbl, stsd, traf, trex, stts, stss, ctts, stsc, stsz, co64, edts, elst, trun$1, types, MAJOR_BRAND, MINOR_VERSION, AVC1_BRAND, VIDEO_HDLR, AUDIO_HDLR, HDLR_TYPES, VMHD, SMHD, DREF, STCO, STSC, STSZ, STTS; // pre-calculate constants
+var box, dinf, esds, ftyp, mdat, mfhd, minf, moof, moov, mvex, mvhd, trak, tkhd, mdia, mdhd, hdlr, sdtp, stbl, stsd, traf, trex, stts, stss, ctts, stsc, stsz, co64, edts, elst, trun$1, types, MAJOR_BRAND, MINOR_VERSION, AVC1_BRAND, VIDEO_HDLR, AUDIO_HDLR, HDLR_TYPES, VMHD, SMHD, DREF, STCO, STSC, STSZ, STTS; // pre-calculate constants
 
 (function () {
     var i;
@@ -3163,9 +3132,6 @@ mdhd = function mdhd(track) {
 mdia = function mdia(track, historyBytes) {
     return box(types.mdia, mdhd(track), hdlr(track.type), minf(track, historyBytes));
 };
-preview_mdia = function preview_mdia(track) {
-    return box(types.mdia, mdhd(track), hdlr(track.type), preview_minf(track));
-};
 
 mfhd = function mfhd(sequenceNumber) {
     return box(types.mfhd, new Uint8Array([0x00, 0x00, 0x00, 0x00, // flags
@@ -3175,10 +3141,6 @@ mfhd = function mfhd(sequenceNumber) {
 
 minf = function minf(track, historyBytes) {
     return box(types.minf, track.type === 'video' ? box(types.vmhd, VMHD) : box(types.smhd, SMHD), dinf(), stbl(track, historyBytes));
-};
-
-preview_minf = function preview_minf(track) {
-    return box(types.minf, track.type === 'video' ? box(types.vmhd, VMHD) : box(types.smhd, SMHD), dinf(), preview_stbl(track));
 };
 
 moof = function moof(sequenceNumber, tracks) {
@@ -3226,17 +3188,6 @@ moov = function moov(tracks, historyBytes) {
     }
 
     return box.apply(null, [types.moov, mvhd(historyBytes.total_duration)].concat(boxes));
-};
-
-preview_moov = function moov(tracks) {
-    var i = tracks.length,
-        boxes = [];
-
-    while (i--) {
-        boxes[i] = preview_trak(tracks[i]);
-    }
-
-    return box.apply(null, [types.moov, mvhd(0xffffffff)].concat(boxes).concat(mvex(tracks)));
 };
 
 mvex = function mvex(tracks) {
@@ -3509,10 +3460,6 @@ stbl = function stbl(track, historyBytes) {
         return box(types.stbl, stsd(track), stts(track, historyBytes), stsc(track, historyBytes), stsz(track, historyBytes), co64(track, historyBytes));
 };
 
-preview_stbl = function preview_stbl(track) {
-    return box(types.stbl, stsd(track), box(types.stts, STTS), box(types.stsc, STSC), box(types.stsz, STSZ), box(types.stco, STCO));
-};
-
 (function () {
     var videoSample, audioSample;
 
@@ -3770,11 +3717,6 @@ trak = function trak(track, historyBytes) {
         return box(types.trak, tkhd(track), edts(track, historyBytes), mdia(track, historyBytes));
 };
 
-preview_trak = function preview_trak(track) {
-    track.duration = track.duration || 0xffffffff;
-    return box(types.trak, tkhd(track), preview_mdia(track));
-};
-
 trex = function trex(track) {
     var result = new Uint8Array([0x00, // version 0
         0x00, 0x00, 0x00, // flags
@@ -3904,15 +3846,6 @@ trex = function trex(track) {
 var mp4Generator = {
     mdat: mdat,
     moof: moof,
-    preview_initSegment: function preview_initSegment(tracks) {
-        var fileType = ftyp(),
-            movie = preview_moov(tracks),
-            result;
-        result = new Uint8Array(fileType.byteLength + movie.byteLength);
-        result.set(fileType);
-        result.set(movie, fileType.byteLength);
-        return result;
-    },
     initSegment: function initSegment(tracks, historyBytes) {
         var fileType = ftyp(),
             movie = moov(tracks, historyBytes),

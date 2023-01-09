@@ -1,0 +1,160 @@
+.editor-holder
+{
+    height: 5rem;
+    position: relative !important;
+}
+
+.slider-holder
+{
+    margin: 0 25px;
+    position: relative;
+    height: 100%;
+}
+
+.slider-background {
+    background-image: url(https://clips-media-assets2.twitch.tv/img/ss-tick-45x48.png);
+    background-size: auto 100%;
+    border-radius: .2rem;
+    width: calc(100% - 50px);
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin-left: 25px;
+    z-index: -1;
+}
+
+.draggable-holder {
+    height: 100%;
+    position: relative;
+    margin:0 25px;
+    text-align: left;
+    user-select: none;
+}
+.draggable-slider-handle {
+    cursor: ew-resize;
+    display: flex !important;
+    -webkit-box-pack: center !important;
+    justify-content: center !important;
+}
+.draggable-slider-handle--blue {
+    background-color: #1f69ff;
+}
+.draggable-slider-handle--left {
+    border-bottom-left-radius: 3px 3px;
+    border-top-left-radius: 3px 3px;
+    position: absolute;
+    top: 0;
+    margin-left: -25px;
+    height: 100%;
+}
+.draggable-slider-handle--right {
+    border-bottom-right-radius: 3px 3px;
+    border-top-right-radius: 3px 3px;
+    position: absolute;
+    right: 0;
+    top: 0;
+    margin-right: -25px;
+    height: 100%;
+}
+
+.draggable-slider__overlay--mid {
+    cursor: grab;
+    display: inline-block !important;
+    overflow: hidden !important;
+    background-color: rgba(31,105,255,.25);
+    border-bottom: 2px solid #1f69ff;
+    border-top: 2px solid #1f69ff;
+    height: calc(100% - 4px);
+}
+
+
+.kNwtyb {
+    position: absolute !important;
+    top: 0px !important;
+    width: 100% !important;
+}
+
+.djJTiU {
+    position: relative !important;
+    top: 0px !important;
+    width: 100% !important;
+    display: flex !important;
+    -webkit-box-pack: center !important;
+    justify-content: center !important;
+}
+
+.fdwfNe {
+    position: absolute !important;
+    bottom: 0px !important;
+    margin-bottom: 1rem !important;
+    z-index: 10 !important;
+}
+
+.QCDcp {
+    background-color: #26262c !important;
+    padding: 0.5rem 1rem !important;
+    width: 100% !important;
+    text-align: center !important;
+    overflow: hidden !important;
+    border-top: 1px solid hsla(0,0%,100%,.08) !important;
+    border-right: 1px solid hsla(0,0%,100%,.08) !important;
+    border-bottom: 1px solid hsla(0,0%,100%,.08) !important;
+    border-left: 1px solid hsla(0,0%,100%,.08) !important;
+}
+
+.clips-editor-slider-popover {
+    display: none;
+    color: #adadb8;
+    box-sizing: border-box;
+}
+.editor-holder:hover .clips-editor-slider-popover {
+    display: block
+}
+
+* 
+{
+    margin: 0;
+}
+
+.geZUHx {
+    -webkit-box-align: center;
+    align-items: center;
+    display: inline-flex;
+}
+
+.hdNNzQ {
+    fill: white;
+}
+
+body
+{
+    text-align: center;
+}
+
+button {
+    width: 150px;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: #004d00;
+    font-size: 16px;
+    color: #fff;
+    cursor: pointer;
+}
+
+
+.loader {
+    border: 10px solid #f3f3f3; /* Light grey */
+    border-top: 10px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 2s linear infinite;
+    margin: auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

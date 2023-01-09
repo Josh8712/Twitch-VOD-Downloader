@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Twitch VOD Downloader",
     "description": "VOD Downloader",
-    "version": "1.0",
+    "version": "0.0.2",
     "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApjkqbv1dy7cUU8uyb+eRMAnUF+TZg6utDgbSzNI4Cn70eNaQXKiWthKKdKiXHApsNFpbCYIs9qHqXMQ2lwqxslKNJFwN21k1/RnRzEBKcfOJlm3MW+ryLnO7cpWZSB7kCoAMw2vg0NBquBO1uaF4nb5YRbOVtQkcLmPubVBtGd07tpP+weuC0M4FKUEQUV6AiJp/G+YZhMSIw+oY5UWTZCjksmFjcJfuAIJFBHqgquJQeUAFhhn3ZZ1mHBvSvMamc4aE4ZhOHqOgwiqn9CRHqRfGUslv/SufpVsY8dlHLxZTzWad5OP9uy8kJ7JpxvqWNBzmOpZzAlL6q9h9AETsdwIDAQAB",
     "action": {
       "default_popup": "popup/popup.html"
@@ -37,7 +37,8 @@
     "content_scripts": [
       {
           "matches": ["https://*.twitch.tv/*"],
-          "js": ["content/click.js"]
+          "js": ["content/click.js"],
+          "run_at": "document_start"
       }
     ]
 }

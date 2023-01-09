@@ -42,9 +42,10 @@ class Decoder {
         this.interrupted = null
         this.max_download_length = max_download_length
 
-        // preview
-        this.sourceBuffer = null
-        this.previewBuffer = []
+        // edit
+        this.editors = []
+        this.segment_history = []
+        this.segment_history_idx = 0
     }
 
     run(hls_url) {
@@ -66,7 +67,9 @@ class Decoder {
         this.total_bytes_count = 0
         this.init_bytes = new Uint8Array()
         this.discontinue = false
-        this.close_previewsource()
+        this.editors = []
+        this.segment_history = []
+        this.segment_history_idx = 0
     }
 
     // decoder
@@ -78,34 +81,6 @@ class Decoder {
             });
         } else {
             this.transmuxer = new RawDecoder()
-        }
-        try {
-            if (this.output_type == 'mp4') {
-                var mediaSource = new MediaSource()
-                this.mediaSource = mediaSource
-                var video = document.querySelector('video')
-                video.src = URL.createObjectURL(mediaSource)
-                mediaSource.addEventListener('sourceopen', sourceOpen);
-
-                function sourceOpen() {
-                    try {
-                        var mime = 'video/mp4; codecs="avc1.64002A,mp4a.40.2"'
-                        _this.sourceBuffer = mediaSource.addSourceBuffer(mime);
-                        _this.setup_preview()
-                    } catch (e) {
-                        push_error(e)
-                        _this.sourceBuffer = null
-                    }
-                }
-                document.getElementById('nopreview').style.display = "none"
-                document.getElementById('preview').style.display = ""
-            } else {
-                document.getElementById('nopreview').style.display = ""
-                document.getElementById('preview').style.display = "none"
-            }
-        } catch (e) {
-            push_error(e)
-            _this.sourceBuffer = null
         }
         this.init_history()
     }
@@ -158,67 +133,6 @@ class Decoder {
         }
     }
 
-    // preview
-    setup_preview() {
-        var _this = this
-        var seekbar = document.getElementById("preview_seekbar")
-        var video = document.querySelector('video')
-        video.onseeked = function (e) {
-            try {
-                if (_this.sourceBuffer.buffered.length > 0) {
-                    if (e.target.currentTime < _this.sourceBuffer.buffered.start(0)) {
-                        e.target.currentTime = _this.sourceBuffer.buffered.start(0) + 1
-                    } else if (e.target.currentTime > _this.sourceBuffer.buffered.end(0)) {
-                        e.target.currentTime = _this.sourceBuffer.buffered.end(0) - 1
-                    }
-                }
-            } catch (e) {
-                push_error(e)
-                _this.sourceBuffer = null
-            }
-        }
-        var start = false
-        seekbar.onchange = function (e) {
-            video.currentTime = e.target.value
-        }
-        this.sourceBuffer.addEventListener('updateend', function () {
-            try {
-                if (_this.sourceBuffer.buffered.length == 1) {
-                    if (!start) {
-                        start = true
-                        video.currentTime = _this.sourceBuffer.buffered.end(0) - 1
-                    }
-                    if (_this.sourceBuffer.buffered.end(0) - _this.sourceBuffer.buffered.start(0) > 60) {
-                        _this.sourceBuffer.remove(0, _this.sourceBuffer.buffered.end(0) - 60)
-                        if (video.currentTime < _this.sourceBuffer.buffered.start(0)) {
-                            video.currentTime = _this.sourceBuffer.buffered.start(0) + 5
-                        }
-                    }
-                    var old_val = parseInt(seekbar.value)
-                    var old_max = parseInt(seekbar.max)
-                    var new_min = parseInt(_this.sourceBuffer.buffered.start(0))
-                    var new_max = parseInt(_this.sourceBuffer.buffered.end(0))
-                    seekbar.min = new_min
-                    seekbar.max = new_max
-                    if (old_val >= old_max)
-                        seekbar.value = new_max + 1
-                    else if (old_val <= new_min)
-                        seekbar.value = new_min
-
-                    document.getElementById("start_preview").innerText = secondsToString(new_min)
-                    document.getElementById("end_preview").innerText = secondsToString(new_max)
-
-                }
-                if (_this.previewBuffer.length > 0 && !_this.sourceBuffer.updating) {
-                    _this.sourceBuffer.appendBuffer(_this.previewBuffer.shift());
-                }
-            } catch (e) {
-                push_error(e)
-                _this.sourceBuffer = null
-            }
-        });
-    }
-
     setup_decoder() {
         var _this = this
         var remuxedSegments = [];
@@ -227,24 +141,6 @@ class Decoder {
         var start = false
 
         this.transmuxer.on('data', function (segment) {
-            try {
-                if (_this.sourceBuffer) {
-                    if (!start) {
-                        start = true
-                        _this.previewBuffer.push(segment.preview_initSegment)
-                    }
-                    _this.previewBuffer.push(segment.preview)
-                    if (!_this.sourceBuffer.updating) {
-                        _this.sourceBuffer.appendBuffer(_this.previewBuffer.shift());
-                    }
-                } else {
-                    _this.previewBuffer.length = 0
-                }
-            } catch (e) {
-                push_error(e)
-                _this.sourceBuffer = null
-            }
-
             remuxedSegments.push(segment);
             remuxedBytesLength += segment.data.byteLength;
             remuxedInitSegment = segment.initSegment;
@@ -305,8 +201,8 @@ class Decoder {
             .catch((e) => {
                 if (e.name == "NotFoundError") {
                     return this.folder_handler.getFileHandle(filename, {
-                            create: true
-                        })
+                        create: true
+                    })
                         .then((file_handler) => {
                             this.file_handler = file_handler
                         })
@@ -335,8 +231,8 @@ class Decoder {
             });
         } else
             return this.file_handler.createWritable({
-                    keepExistingData: true
-                })
+                keepExistingData: true
+            })
                 .then((writableStream) => {
                     this.writableStream = writableStream
                 })
@@ -457,13 +353,29 @@ class Decoder {
         });
     }
     // step ts
+    send_ts_editor(segment, duration) {
+        this.segment_history.push({data: segment, id: this.segment_history_idx, duration: duration})
+        while (this.segment_history.length > 50)
+            this.segment_history.shift()
+        for (var ei = 0; ei < this.editors.length; ei++) {
+            var editor = this.editors[ei]
+            if (editor.closed) {
+                this.editors.splice(ei, 1)
+                ei--;
+            }
+            else {
+                editor.postMessage(this.segment_history[this.segment_history.length - 1], '*')
+            }
+        }
+        this.segment_history_idx += 1
+    }
     write_ts(response) {
         var segment = new Uint8Array(response);
         if (window.debugFolder) {
             debugFolder.nameidx += 1
             debugFolder.getFileHandle(debugFolder.nameidx + ".ts", {
-                    create: true
-                })
+                create: true
+            })
                 .then(h => {
                     return h.createWritable()
                 }).then(r => {
@@ -504,6 +416,7 @@ class Decoder {
                     if (req.readyState == 4) {
                         if (req.status == 200) {
                             _this.write_ts(req.response)
+                            _this.send_ts_editor(req.response, duration)
                             _this.current_time = date_time
                             _this.total_duration += duration
                             resolve(_this.process_ts(ts_list, idx + 1))
@@ -525,17 +438,17 @@ class Decoder {
         if (!this.has_pushed)
             return
         return new Promise((resolve, reject) => {
-                var date = new Date(0);
-                date.setSeconds(this.total_duration);
-                set_status("已處理 " + date.toISOString().substring(11, 19) + " 秒")
+            var date = new Date(0);
+            date.setSeconds(this.total_duration);
+            set_status("已處理 " + date.toISOString().substring(11, 19) + " 秒")
 
-                this.flush_promise_resolve = resolve
-                this.transmuxer.flush(this.historyBytes)
-                if (this.flush_promise_resolve) {
-                    this.flush_promise_resolve = null
-                    resolve()
-                }
-            })
+            this.flush_promise_resolve = resolve
+            this.transmuxer.flush(this.historyBytes)
+            if (this.flush_promise_resolve) {
+                this.flush_promise_resolve = null
+                resolve()
+            }
+        })
             .then(() => {
                 if (this.max_download_length > 0 &&
                     this.total_duration > this.max_download_length) {
@@ -580,23 +493,7 @@ class Decoder {
         return this.file_handler.name
     }
 
-    close_previewsource() {
-        try {
-            if (this.mediaSource) {
-                this.previewBuffer.length = 0
-                try {
-                    this.mediaSource.endOfStream()
-                    this.mediaSource = null
-                } catch (e) {
-                }
-            }
-        } catch (e) {
-            push_error(e)
-        }
-    }
-
     closeFile() {
-        this.close_previewsource()
         var date = new Date(0);
         var filename = this.getCurrentFilename()
         date.setSeconds(this.total_duration);
@@ -611,19 +508,19 @@ class Decoder {
             var file_handler = this.file_handler
             this.pendingWritable.push(file_handler)
             this._closeFile()
-            .then((file_handler) => {
-                if (total_bytes_count == 0) {
-                    push_error("移除空影片 - " + filename)
-                    return this.deleteFile(file_handler)
-                } else
-                    return this.finishVideo(file_handler)
-            }).then(() => {
-                push_message("輸出完成 - " + filename)
-            }).catch(e => {
-                push_error(filename + " - " + e)
-            }).finally(()=>{
-                file_handler.output_finished = true
-            });
+                .then((file_handler) => {
+                    if (total_bytes_count == 0) {
+                        push_error("移除空影片 - " + filename)
+                        return this.deleteFile(file_handler)
+                    } else
+                        return this.finishVideo(file_handler)
+                }).then(() => {
+                    push_message("輸出完成 - " + filename)
+                }).catch(e => {
+                    push_error(filename + " - " + e)
+                }).finally(() => {
+                    file_handler.output_finished = true
+                });
             return
         })
     }
@@ -641,5 +538,47 @@ class Decoder {
     setInterrupt() {
         this.interrupted = true
         set_status("中斷錄影中")
+    }
+
+    // edit clip
+    setup_edit_clip() {
+        try {
+            var _this = this
+            // var w = window.open('../editor/editor.html')
+            var w = window.open('https://josh8712.github.io/Twitch-VOD-Downloader/twitch-downloader/editor/editor.html')
+            
+            w.idx = 0
+            var id = new Date().getTime()
+            var retry = 0
+            var check_int = setInterval(function () {
+                try {
+                    w.postMessage({ message: 'hello', id: id }, '*')
+                    retry += 1
+                    if (retry > 10) {
+                        clearInterval(check_int)
+                        window.removeEventListener('message', checker)
+                    }
+                } catch {
+
+                }
+            }, 1000)
+            function checker(e) {
+                try {
+                    if (e?.data?.message == id) {
+                        clearInterval(check_int)
+                        window.removeEventListener('message', checker)
+                        _this.segment_history.forEach(segment => {
+                            w.postMessage(segment, '*')
+                        })
+                        _this.editors.push(w)
+                    }
+                } catch {
+
+                }
+            }
+            window.addEventListener('message', checker)
+        } catch {
+
+        }
     }
 }
