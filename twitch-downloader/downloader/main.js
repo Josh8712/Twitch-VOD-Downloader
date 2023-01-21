@@ -51,6 +51,7 @@ document.addEventListener("DOMContentLoaded", function(){
     document.getElementById("dest_text").addEventListener("keydown", preventKey);    
     // storage - cloud
     document.getElementById("youtube").addEventListener("click", authYoutube);
+    document.getElementById("youtube_live").addEventListener("click", authYoutubeLive);
     document.getElementById("google").addEventListener("click", authGoogle);
     document.getElementById("onedrive").addEventListener("click", authOnedrive);
     
@@ -110,8 +111,10 @@ function restoreSetting() {
                 var instance = null
                 if(e.type == "youtube") {
                     instance = new YoutubeStorage();
-                    
-                } else if(e.type == "gdrive") {
+                } else if(e.type == "youtube_live") {
+                    instance = new YoutubeLiveStorage();
+                }
+                else if(e.type == "gdrive") {
                     instance = new GoogleStorage();
                 }
                 if( instance ) {
@@ -252,6 +255,10 @@ function authOnedrive() {
 // storage - youtube
 function authYoutube() {
     authCloud("youtube", 'youtube', "Youtube Channel", YoutubeStorage)
+}
+
+function authYoutubeLive() {
+    authCloud("youtube_live", 'youtube_live', "Youtube Channel (Broadcast)", YoutubeLiveStorage)
 }
 
 // message

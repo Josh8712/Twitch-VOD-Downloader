@@ -49,4 +49,8 @@ class CloudWritable {
     close() {
         throw new Error("Not implemented")
     }
+
+    hasData() {
+        return true
+    }
 }

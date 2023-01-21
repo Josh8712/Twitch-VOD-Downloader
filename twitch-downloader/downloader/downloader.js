@@ -219,10 +219,13 @@ class Downloader {
         var holder_type = this.folder_handler.type
         if (holder_type == 'local')
             this.decoder = new Decoder(this.pendingWritable, this.folder_handler.handler, this.output_type, this.output_length)
-        else if (holder_type == 'youtube') {
+        else if (holder_type.startsWith('youtube')) {
             if (this.output_length == -1)
                 this.output_length = 36000
-            this.decoder = new CloudDecoder(this.pendingWritable, this.folder_handler.handler, this.output_type, Math.min(this.output_length, 36000))
+            if(holder_type == "youtube_live")
+                this.decoder = new YoutubeLiveDecoder(this.pendingWritable, this.folder_handler.handler, this.output_type, Math.min(this.output_length, 36000))
+            else
+                this.decoder = new CloudDecoder(this.pendingWritable, this.folder_handler.handler, this.output_type, Math.min(this.output_length, 36000))
         } else
             this.decoder = new CloudDecoder(this.pendingWritable, this.folder_handler.handler, this.output_type, this.output_length)
 

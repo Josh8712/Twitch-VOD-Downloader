@@ -1,7 +1,7 @@
 <html>
 
     <head>
-        <title>Twitch VOD Downloader V0.0.2</title>
+        <title>Twitch VOD Downloader V0.0.3</title>
         <meta charset="UTF-8">
         <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css"
@@ -218,13 +218,16 @@
 
         <script type="text/javascript" src="decoder/decoder.js"></script>
         <script type="text/javascript" src="decoder/cloud.js"></script>
+        <script type="text/javascript" src="decoder/youtube.js"></script>
 
         
         <script type="text/javascript" src="storage/writable/cloud.js"></script>
         <script type="text/javascript" src="storage/writable/google.js"></script>
+        <script type="text/javascript" src="storage/writable/youtube.js"></script>
         <script type="text/javascript" src="storage/cloud.js"></script>
         <script type="text/javascript" src="storage/youtube.js"></script>
         <script type="text/javascript" src="storage/google.js"></script>
+        <script type="text/javascript" src="storage/youtube_live.js"></script>
         <script type="text/javascript" src="storage/onedrive.js"></script>
 
         <script type="text/javascript" src="downloader.js"></script>
@@ -277,7 +280,8 @@
                                     autocomplete="off" />
                                 <div style="width: 100%;">
                                     <button id="dest" style="width: auto;" type="button">瀏覽</button>
-                                    <button id="youtube" style="width: auto;" type="button">上傳至Youtube</button>
+                                    <button id="youtube_live" style="width: auto;" type="button">透過Youtube私人直播</button>
+                                    <button id="youtube" style="width: auto;" type="button">上傳至Youtube影片</button>
                                     <button id="google" style="width: auto;" type="button">上傳至Google Drive</button>
                                     <button id="onedrive" style="width: auto; display: none;" disabled type="button">上傳至Microsoft Onedrive</button>
                                 </div>

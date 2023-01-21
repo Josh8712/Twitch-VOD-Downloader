@@ -62,12 +62,18 @@ class CloudDecoder extends Decoder {
     }
 
     saveFile(init_bytes, bytes) {
-        return this.writableStream.write({
-            type: "write",
-            data: new Uint8Array([0x00, 0x00, 0x00, 0x01, 0x6d, 0x64, 0x61, 0x74].concat(longToByteArray(8 + 8 + bytes.length))),
-            position: this.total_bytes_count
+        return new Promise((resolve, reject)=>{
+            if(this.output_type == 'mp4')
+                resolve(this.writableStream.write({
+                    type: "write",
+                    data: new Uint8Array([0x00, 0x00, 0x00, 0x01, 0x6d, 0x64, 0x61, 0x74].concat(longToByteArray(8 + 8 + bytes.length))),
+                    position: this.total_bytes_count
+                }).then(()=>{
+                    this.total_bytes_count += 8 + 8
+                }))
+            else
+                resolve()
         }).then(() => {
-            this.total_bytes_count += 8 + 8
             return this.writableStream.write({
                 type: "write",
                 data: bytes,

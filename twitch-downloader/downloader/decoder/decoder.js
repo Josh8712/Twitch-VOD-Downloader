@@ -74,7 +74,6 @@ class Decoder {
 
     // decoder
     init_decoder() {
-        var _this = this
         if (this.output_type == 'mp4') {
             this.transmuxer = new Transmuxer({
                 remux: true
@@ -138,8 +137,6 @@ class Decoder {
         var remuxedSegments = [];
         var remuxedBytesLength = 0;
         var remuxedInitSegment = null;
-        var start = false
-
         this.transmuxer.on('data', function (segment) {
             remuxedSegments.push(segment);
             remuxedBytesLength += segment.data.byteLength;
@@ -203,9 +200,9 @@ class Decoder {
                     return this.folder_handler.getFileHandle(filename, {
                         create: true
                     })
-                        .then((file_handler) => {
-                            this.file_handler = file_handler
-                        })
+                    .then((file_handler) => {
+                        this.file_handler = file_handler
+                    })
                 }
                 throw e
             })
@@ -213,9 +210,9 @@ class Decoder {
 
     create_file() {
         this.reset()
+        push_message("建立新影片")
         return this._create_file()
             .then(() => {
-                push_message("建立新影片")
                 return this.recreate_writable()
             }).then(() => {
                 this.init_decoder()
@@ -369,7 +366,7 @@ class Decoder {
         }
         this.segment_history_idx += 1
     }
-    write_ts(response) {
+    write_ts(response, duration) {
         var segment = new Uint8Array(response);
         if (window.debugFolder) {
             debugFolder.nameidx += 1
@@ -415,7 +412,7 @@ class Decoder {
                 try {
                     if (req.readyState == 4) {
                         if (req.status == 200) {
-                            _this.write_ts(req.response)
+                            _this.write_ts(req.response, duration)
                             _this.send_ts_editor(req.response, duration)
                             _this.current_time = date_time
                             _this.total_duration += duration
@@ -434,14 +431,8 @@ class Decoder {
         })
     }
     // step flush
-    flush() {
-        if (!this.has_pushed)
-            return
+    _flush() {
         return new Promise((resolve, reject) => {
-            var date = new Date(0);
-            date.setSeconds(this.total_duration);
-            set_status("已處理 " + date.toISOString().substring(11, 19) + " 秒")
-
             this.flush_promise_resolve = resolve
             this.transmuxer.flush(this.historyBytes)
             if (this.flush_promise_resolve) {
@@ -449,44 +440,70 @@ class Decoder {
                 resolve()
             }
         })
-            .then(() => {
-                if (this.max_download_length > 0 &&
-                    this.total_duration > this.max_download_length) {
-                    this.discontinue = true
-                }
-            }).then(() => {
-                if (this.discontinue) {
-                    this.discontinue = false
-                    return this.closeFile().then(() => {
-                        return this.create_file()
-                    })
-                }
-            })
+    }
+
+    flush() {
+        if (!this.has_pushed)
+            return
+        var date = new Date(0);
+        date.setSeconds(this.total_duration);
+        set_status("已處理 " + date.toISOString().substring(11, 19) + " 秒")
+        return this._flush()
+        .then(() => {
+            if (this.max_download_length > 0 &&
+                this.total_duration > this.max_download_length) {
+                this.discontinue = true
+            }
+        }).then(() => {
+            if (this.discontinue) {
+                this.discontinue = false
+                return this.closeFile().then(() => {
+                    return this.create_file()
+                })
+            }
+        })
     }
     // step save
     saveFile(init_bytes, bytes) {
-        return this.writableStream.write({
-            type: "write",
-            data: new Uint8Array([0x00, 0x00, 0x00, 0x01, 0x6d, 0x64, 0x61, 0x74].concat(longToByteArray(this.total_bytes_count + 8 + 8 + bytes.length))),
-            position: 0
-        }).then(() => {
+        if(this.output_type == 'mp4') {
+            return this.writableStream.write({
+                type: "write",
+                data: new Uint8Array([0x00, 0x00, 0x00, 0x01, 0x6d, 0x64, 0x61, 0x74].concat(longToByteArray(this.total_bytes_count + 8 + 8 + bytes.length))),
+                position: 0
+            }).then(() => {
+                return this.writableStream.write({
+                    type: "write",
+                    data: bytes,
+                    position: 8 + 8 + this.total_bytes_count
+                })
+            }).then(() => {
+                this.total_bytes_count += bytes.length
+                this.init_bytes = init_bytes
+            })
+        }
+        else {
             return this.writableStream.write({
                 type: "write",
                 data: bytes,
-                position: 8 + 8 + this.total_bytes_count
+            }).then(() => {
+                this.total_bytes_count += bytes.length
+                this.init_bytes = init_bytes
             })
-        }).then(() => {
-            this.total_bytes_count += bytes.length
-            this.init_bytes = init_bytes
-        })
+        }
     }
     // step close
     _closeFile() {
         var file_handler = this.file_handler
-        return this.writableStream.close()
+        return this.writableStream.write({
+            type: "write",
+            data: this.init_bytes,
+            position: this.total_bytes_count + 16 - this.historyBytes.mdatHead
+        }).then(()=>{
+            return this.writableStream.close()
             .then(() => {
                 return file_handler
             })
+        })
     }
 
     getCurrentFilename() {
@@ -499,30 +516,24 @@ class Decoder {
         date.setSeconds(this.total_duration);
         push_message(`輸出檔案 - ${filename} (${date.toISOString().substring(11, 19)})`)
         set_status("檔案輸出中，請稍後，請勿離開此頁面")
-        return this.writableStream.write({
-            type: "write",
-            data: this.init_bytes,
-            position: this.total_bytes_count + 16 - this.historyBytes.mdatHead
+        
+        var total_bytes_count = this.total_bytes_count
+        var file_handler = this.file_handler
+        this.pendingWritable.push(file_handler)
+        return this._closeFile()
+        .then((file_handler) => {
+            if (total_bytes_count == 0) {
+                push_error("移除空影片 - " + filename)
+                return this.deleteFile(file_handler)
+            } else
+                return this.finishVideo(file_handler)
         }).then(() => {
-            var total_bytes_count = this.total_bytes_count
-            var file_handler = this.file_handler
-            this.pendingWritable.push(file_handler)
-            this._closeFile()
-                .then((file_handler) => {
-                    if (total_bytes_count == 0) {
-                        push_error("移除空影片 - " + filename)
-                        return this.deleteFile(file_handler)
-                    } else
-                        return this.finishVideo(file_handler)
-                }).then(() => {
-                    push_message("輸出完成 - " + filename)
-                }).catch(e => {
-                    push_error(filename + " - " + e)
-                }).finally(() => {
-                    file_handler.output_finished = true
-                });
-            return
-        })
+            push_message("輸出完成 - " + filename)
+        }).catch(e => {
+            push_error(filename + " - " + e)
+        }).finally(() => {
+            file_handler.output_finished = true
+        });
     }
     // step finish
     deleteFile(file_handler) {

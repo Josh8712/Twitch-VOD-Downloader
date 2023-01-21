@@ -84,6 +84,7 @@ note_youtube_content = `
     <li> 需 <a href="https://studio.youtube.com/" target="_blank">創建</a> Youtube 頻道 <b> (必須) </b> </li>
     <li> 需 <a href="https://www.youtube.com/verify" target="_blank">啟用</a> 上傳 <a href="https://support.google.com/youtube/answer/71673" target="_blank"> 長片 </a>權限 <b> (必須) </b> </li>
     <li> <a href="https://support.google.com/youtube/answer/9891124#hcfe-content" target="_blank">開啟進階功能</a> 擴增上傳數量限制 <b> (可能需要) </b> </li>
+    <li> 透過直播串流影片可以即時回放 </li>
     <li> 系統將自動建立一個 vods 播放清單 <br> 並加入錄製的影片 </li>
     <li> 影片完成輸出前直接關閉下載頁面將遺失影片 </li>
     <li> 請遵守Youtube <a href="https://support.google.com/youtube/answer/9288567" target="_blank">使用規範</a> 評估使用上傳服務 </li>

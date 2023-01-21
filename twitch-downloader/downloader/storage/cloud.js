@@ -14,8 +14,11 @@ class CloudStorage {
         this.videos = null
     }
 
+    requestPermission() {
+        throw Error("RequestPermission not implemented")
+    }
+
     createVideo(filename) {
-        throw Error("Create File not implemented")
     }
 
     deleteVideo(videoID) {
