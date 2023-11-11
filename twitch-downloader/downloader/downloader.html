@@ -1,7 +1,7 @@
 <html>
 
     <head>
-        <title>Twitch VOD Downloader V0.0.3</title>
+        <title>Twitch VOD Downloader V0.0.4</title>
         <meta charset="UTF-8">
         <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" rel="stylesheet">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css"
@@ -204,6 +204,10 @@
                 text-align: center !important;
                 padding: 6px 12px !important;
             }
+            #files {
+                max-height: 40vh;
+                overflow: auto;
+            }
         </style>
 
         <link rel="stylesheet" href="style.css">
@@ -370,7 +374,11 @@
                             </tr>
                             <tr>
                                 <th scope="row" class="scope">資料夾檔案<br><br><span id="folder_name"></span></th>
-                                <td id="files"></td>
+                                <td>
+                                    <div id="files">
+
+                                    </div>
+                                </td>
                             </tr>
                             <tr>
                                 <th scope="row" class="scope">操作</th>

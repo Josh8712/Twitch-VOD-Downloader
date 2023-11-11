@@ -86,7 +86,7 @@ class GoogleStorage extends CloudStorage {
     findPlayListItems(token, items, pageToken=null) {
         var url = "https://www.googleapis.com/drive/v3/files?fields=files(webViewLink,name)&q='" + this.folderID + "'  in parents"
         if(pageToken)
-            url += "&pageToken" + pageToken
+            url += "&pageToken=" + pageToken
         return fetch(url, {
             method: 'GET',
             headers: {
