@@ -1,4 +1,4 @@
-var version = 'v0.0.4'
+var version = 'v0.1.1'
 var changeLogURL = "https://raw.githubusercontent.com/Josh8712/Twitch-VOD-Downloader/master/changelog"
 function chech_update() {
     fetch(changeLogURL + "?time=" + new Date().getTime())
@@ -45,7 +45,7 @@ function show_update(change) {
 }
 
 document.addEventListener("DOMContentLoaded", function(){
-    // chech_update()
+    chech_update()
     document.querySelector('#update button[class=close]').addEventListener('click', function(){
         document.querySelector("#update button").click()
     });

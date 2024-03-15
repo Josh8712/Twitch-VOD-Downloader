@@ -54,6 +54,7 @@ document.addEventListener("DOMContentLoaded", function(){
     document.getElementById("youtube_live").addEventListener("click", authYoutubeLive);
     document.getElementById("google").addEventListener("click", authGoogle);
     document.getElementById("onedrive").addEventListener("click", authOnedrive);
+    document.getElementById("logout").addEventListener("click", logoutGoogle);
     
     // twitch token
     document.getElementById("get_twitch_oauth").onclick = function(event){event.preventDefault(); findTwitchOauth(true)}
@@ -182,6 +183,8 @@ function start() {
                                'output_length': output_length })
     if(dest && dest.cleanup)
         dest.cleanup()
+    if (dest.handler.btn)
+        delete dest.handler.btn
     set('dest', dest)
     document.querySelector('.banner h1').innerText = channel_name + " VOD Downloader"
     downloader = new Downloader(auth_token, channel_name, quality, dest, interval, output_type, output_length)
@@ -247,6 +250,20 @@ function authCloud(id, identifier, desc, storage) {
 // storage - drive
 function authGoogle() {
     authCloud("google", 'gdrive', "Google drive", GoogleStorage)
+}
+function logoutGoogle() {
+    return chrome.identity.getAuthToken({
+        interactive: false
+    }).then(token => {
+        return fetch("https://accounts.google.com/o/oauth2/revoke?token=" + token.token)
+        .then(() => {
+            return chrome.identity.removeCachedAuthToken({token: token.token})
+        })
+    }).then(() => {
+        showAlert("已登出")
+    }).catch((e) => {
+        showAlert(e)
+    })
 }
 // storage - onedrive
 function authOnedrive() {

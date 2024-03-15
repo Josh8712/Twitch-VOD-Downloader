@@ -136,17 +136,23 @@ class YoutubeStorage extends CloudStorage {
 
     verifyAuthYoutube(authWindow) {
         var _this = this
-        if(this.authCallbackPair == null) {
-            if (!authWindow.closed) 
-                authWindow.close()
-            return
-        }
-        if(authWindow.closed) {
-            if(this.btn)
-                this.btn.show()
-            return this.authCallbackPair[1](new Error("使用者取消認證"))
-        }
-        setTimeout(function(){ _this.verifyAuthYoutube(authWindow) }, 1000);
+        chrome.tabs.query({url: "https://accounts.google.com/*111793709140*"}, function (tabs) {
+            var closed = tabs.length == 0;
+            if(_this.authCallbackPair == null) {
+                chrome.tabs.query({url: "http://127.0.0.1:13604/*"}, function (tabs) {
+                    tabs.forEach(function(tab) {
+                        chrome.tabs.remove(tab.id)
+                    })
+                })
+                return
+            }
+            if(closed) {
+                if(_this.btn)
+                    _this.btn.show()
+                return _this.authCallbackPair[1](new Error("使用者取消認證"))
+            }
+            setTimeout(function(){ _this.verifyAuthYoutube(authWindow) }, 1000);
+        })
     }
 
     // api

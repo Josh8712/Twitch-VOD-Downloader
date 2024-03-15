@@ -13,48 +13,45 @@ class GoogleStorage extends CloudStorage {
             })
     }
 
-    handlePathCallback(e, resolve, reject) {
-        if(e.action == 'picked') {
-            var title = e?.docs?.[0]?.name
-            var id = e?.docs?.[0]?.id
-            if(this.btn) {
-                this.btn.show()
-                this.btn = null
-            }
-            this.folderID = id
-            if(title && id)
-                resolve(title)
-            reject(new Error("無法取得資料夾"))
-        } else if(e.action == 'cancel') {
-            reject(new Error("使用者取消認證"))
-        }
-    }
-
     getPath() {
         var _this = this
         return new Promise((resolve, reject) => {
-                gapi.load('picker', function () {
-                    resolve()
+                gapi.load('client', function () {
+                    gapi.client.init({
+                        'apiKey': _this.apiKey,
+                        discoveryDocs: ['/downloader/rest']
+                    }).then(() => {
+                        resolve()
+                    })
                 })
             })
             .then(() => {
                 return this.getAuthToken()
             })
             .then(token => {
+                gapi.client.setToken({
+                    'access_token': token
+                })
                 return new Promise((resolve, reject) => {
-                    var docsView = new google.picker.DocsView()
-                    .setIncludeFolders(true) 
-                    .setMimeTypes('application/vnd.google-apps.folder')
-                    .setOwnedByMe(true)
-                    .setSelectFolderEnabled(true);
-                    
-                    const picker = new google.picker.PickerBuilder()
-                        .addView(docsView)
-                        .setOAuthToken(token)
-                        .setDeveloperKey(this.apiKey)
-                        .setCallback(function(e) { _this.handlePathCallback(e, resolve, reject) })
-                        .build();
-                    picker.setVisible(true)
+                    new FolderWalker(
+                        {
+                            storage: _this,
+                            onChosen: function(title, folderID) {
+                                if(this.btn) {
+                                    this.btn.show()
+                                    this.btn = null
+                                }
+                                _this.folderID = folderID
+                                if(title && folderID)
+                                    resolve(title)
+                                else
+                                    reject(new Error("無法取得資料夾"))
+                            },
+                            onCancel: function (e) {
+                                reject(e)
+                            }
+                        }
+                    ).update();
                 })
             })
     }
@@ -75,6 +72,15 @@ class GoogleStorage extends CloudStorage {
         return this.getPathID()
         .then(()=>{
             return "granted"
+        })
+    }
+
+    getFoldersForPath(folderId) {
+        return gapi.client.drive.files.list({
+            q: "'" + folderId + "' in parents and mimeType = 'application/vnd.google-apps.folder' and ('me' in writers or 'me' in owners)  and trashed = false",
+            fields: 'files(id,name)' 
+        }).then(e=>{
+            return e.result.files
         })
     }
 
