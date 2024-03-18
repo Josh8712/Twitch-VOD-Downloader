@@ -85,7 +85,7 @@ function checkLive() {
                                 chrome.notifications.create("streamStart", {
                                     type: chrome.notifications.TemplateType.BASIC,
                                     iconUrl: "https://static-cdn.jtvnw.net/jtv_user_pictures/8aae7c4e-05f5-4d4f-b49a-dc28f6099fbb-profile_image-70x70.png",
-                                    title: "VOD Downloader " + channel + " 直播開始了",
+                                    title: "Streaming Recorder " + channel + " 直播開始了",
                                     message: "無法於背景開始本地下載作業",
                                     buttons: [reopen, cancel],
                                     isClickable: true
@@ -270,7 +270,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
                                 chrome.notifications.create("WarnClosed", {
                                     type: chrome.notifications.TemplateType.BASIC,
                                     iconUrl: "https://static-cdn.jtvnw.net/jtv_user_pictures/8aae7c4e-05f5-4d4f-b49a-dc28f6099fbb-profile_image-70x70.png",
-                                    title: "VOD Downloader 已停止下載作業",
+                                    title: "Streaming Recorder 已停止下載作業",
                                     message: "本地儲存需要頁面保持開啟，才能自動執行下載作業，僅能於背景檢查直播開始通知",
                                     buttons: [reopen, cancel],
                                     isClickable: true
@@ -284,7 +284,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
                                 chrome.notifications.create("CancelInterrupt", {
                                     type: chrome.notifications.TemplateType.BASIC,
                                     iconUrl: "https://static-cdn.jtvnw.net/jtv_user_pictures/8aae7c4e-05f5-4d4f-b49a-dc28f6099fbb-profile_image-70x70.png",
-                                    title: "VOD Downloader 在背景執行檢查",
+                                    title: "Streaming Recorder 在背景執行檢查",
                                     message: "當直播開始時會自動執行錄影上傳",
                                     buttons: [cancel],
                                     isClickable: true
@@ -307,7 +307,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
                     chrome.notifications.create("stopped", {
                         type: chrome.notifications.TemplateType.BASIC,
                         iconUrl: "https://static-cdn.jtvnw.net/jtv_user_pictures/8aae7c4e-05f5-4d4f-b49a-dc28f6099fbb-profile_image-70x70.png",
-                        title: "VOD Downloader 已停止背景檢查",
+                        title: "Streaming Recorder 已停止背景檢查",
                         message: "已偵測到下載頁面開啟",
                         isClickable: true
                     });

@@ -186,7 +186,7 @@ function start() {
     if (dest.handler.btn)
         delete dest.handler.btn
     set('dest', dest)
-    document.querySelector('.banner h1').innerText = channel_name + " VOD Downloader"
+    document.querySelector('.banner h1').innerText = channel_name + " Streaming Recorder"
     downloader = new Downloader(auth_token, channel_name, quality, dest, interval, output_type, output_length)
     downloader.check_live(sleep=false)
 }
