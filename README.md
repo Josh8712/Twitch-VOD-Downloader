@@ -9,15 +9,22 @@
 1. 安裝[Chrome](https://www.google.com/intl/zh-TW/chrome/)或[Edge](https://www.microsoft.com/edge/launch/try-edge-now)瀏覽器
 
 ## 安裝步驟
-1. [下載](https://github.com/Josh8712/Twitch-VOD-Downloader/releases/download/v0.0.3/twitch-downloader.zip) 資料並解壓縮
+### Chrome
+1. 從 [chrome 線上應用程式商店](https://chrome.google.com/webstore/detail/lpmloonegabodoemnbhpclbpkihangom) 安裝
+### 手動安裝
+<details>
+    <summary>步驟</summary>
+
+1. [下載](https://github.com/Josh8712/Twitch-VOD-Downloader/releases/latest/download/twitch-downloader.zip) 資料並解壓縮
 2. 開啟Chrome/Edge擴充功能管理
 ![開啟Chrome擴充功能管理](img/step1.png)
 3. 開啟開發人員模式，載入未封裝項目
 ![開啟開發人員模式](img/step2.png)
 4. 選擇下載解壓縮資料夾位置
 ![選擇下載解壓縮資料夾位置](img/step3.png)
-5. 開始使用並約讀注意事項
+5. 開始使用並閱讀注意事項
 ![開始使用並約讀注意事項](img/start.png)
+</details>
 
 ## 注意事項
 1. 使用前請務必閱讀工具內的注意事項
