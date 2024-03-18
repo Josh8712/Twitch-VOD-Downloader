@@ -1,3 +1,6 @@
+window['startup'] = function() {
+    googleapis.server.init();
+};
 (function() {
     var aa = function(a) {
         var b = 0;
@@ -487,7 +490,7 @@
         var bscb = b;
         b = l;
         c = b.match(Ua);
-        // (d = b.match(Va)) && 1 === d.length && Wa.test(b) && c && 1 === c.length || W("failed sanity: " + a);
+        (d = b.match(Va)) && 1 === d.length && Wa.test(b) && c && 1 === c.length || W("failed sanity: " + a);
         try {
             a = "?";
             if (e && 0 < e.length) {
@@ -509,8 +512,8 @@
                 A && A.length && (l = "" + l + a + "ol=" + A.length)
             }
         } catch (ba) {}
-        // return 'js/google-' + bscb + '.js'
-        return l
+        return 'js/google-' + bscb + '.js'
+        // return l
     }
       , $a = function(a, b, c, d) {
         a = Ya(a);
@@ -575,12 +578,12 @@
         }
         return null
     }
-      , Wa = /^chrome-extension?:\/\/lpmloonegabodoemnbhpclbpkihangom(rs)?(:\d+)?\/[a-zA-Z0-9_.,!=\-\/]+$/
+      , Wa = /^https?:\/\/[a-z0-9_.-]+\.google(rs)?\.com(:\d+)?\/[a-zA-Z0-9_.,!=\-\/]+$/
       , Va = /\/cb=/g
       , Ua = /\/\//g;
     Oa.m = function(a, b, c, d) {
         (a = a[0]) || W("missing_hint");
-        return "chrome-extension://lpmloonegabodoemnbhpclbpkihangom/downloader/js/google-client.js"
+        return "https://apis.google.com" + $a(a, b, c, d)
     }
     ;
     var Y = decodeURI("%73cript"), ab = /^[-+_0-9\/A-Za-z]+={0,2}$/, bb = function(a, b) {
@@ -784,9 +787,9 @@
     Ma("bs1");
     delete window.gapi._bs;
     window.gapi.load("", {
-        callback: window["gapi_onload"],
+        callback: window["startup"],
         _c: {
-            url: "chrome-extension://lpmloonegabodoemnbhpclbpkihangom/js/api.js",
+            url: "https://apis.google.com/js/googleapis.proxy.js",
             jsl: {
                 ci: {
                     "oauth-flow": {
@@ -800,14 +803,14 @@
                         reportExceptionRate: 1,
                         forceIm: !1,
                         rethrowException: !0,
-                        host: "chrome-extension://lpmloonegabodoemnbhpclbpkihangom"
+                        host: "https://apis.google.com"
                     },
                     enableMultilogin: !0,
                     "googleapis.config": {
                         auth: {
                             useFirstPartyAuthV2: !0
                         },
-                        root: "chrome-extension://lpmloonegabodoemnbhpclbpkihangom",
+                        root: "https://content.googleapis.com",
                         "root-1p": "https://clients6.google.com"
                     },
                     inline: {
@@ -886,7 +889,7 @@
                         surveyoptin: {
                             url: "https://www.google.com/shopping/customerreviews/optin?usegapi=1"
                         },
-                        ":socialhost:": "chrome-extension://lpmloonegabodoemnbhpclbpkihangom",
+                        ":socialhost:": "https://apis.google.com",
                         shortlists: {
                             url: ""
                         },
@@ -1014,7 +1017,7 @@
                     }
                 },
                 h: "m;/_/scs/abc-static/_/js/k=gapi.lb.zh_TW.ACbYAaLVcHY.O/d=1/rs=AHpOoo9rgBJ7cbSk9psxyAqpdQBDqoVUuA/m=__features__",
-                u: "chrome-extension://lpmloonegabodoemnbhpclbpkihangom/js/api.js",
+                u: "https://apis.google.com/js/googleapis.proxy.js",
                 hee: !0,
                 dpo: !1,
                 le: ["scs"],

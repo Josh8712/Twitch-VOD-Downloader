@@ -36,15 +36,22 @@ FolderWalker.prototype = {
         return str
     },
 
+    getFolderId: function () {
+        var id = 'root'
+        if (this.pathList.length > 0)
+            id = this.pathList[this.pathList.length - 1].id
+        return id
+    },
+
     update: function () {
         this.show()
         var self = this
         this.nodes.selectFolderBtn.classList.add('not-active');
         this._showLoader();
 
-        this.storage.getFoldersForPath(this.buildPath())
-            .then(okResp => {
-                var containerNode = self.getFoldersElements(okResp);
+        this.storage.getFoldersForPath(this.getFolderId())
+            .then(children => {
+                var containerNode = self.getFoldersElements(children);
                 self.nodes.contentArea.textContent = '';
                 self._handleBreadCrumbs();
                 self.nodes.contentArea.appendChild(containerNode);
@@ -52,12 +59,12 @@ FolderWalker.prototype = {
                     try {
                         var cL = e.target.classList;
                         if (cL.contains('folder-line')) {
-                            if ((cL.contains('back-line') && e.target.getAttribute('data-item-id') !== 'null') || cL.contains('folder-line-disabled')) {
-                                return;
-                            }
                             self.clearSelected();
                             cL.add('selected');
-                            self.nodes.selectFolderBtn.classList.remove('not-active');
+                            if ((cL.contains('back-line') && e.target.getAttribute('data-item-id') !== 'null') || cL.contains('folder-line-disabled')) {
+                                self.nodes.selectFolderBtn.classList.add('not-active');
+                            } else
+                                self.nodes.selectFolderBtn.classList.remove('not-active');
                         }
                     } catch (e) {
                         self.nodes.contentArea.textContent = '';
@@ -66,14 +73,17 @@ FolderWalker.prototype = {
                 });
                 containerNode.addEventListener('dblclick', function (e) {
                     try {
-                        if (e.target.getAttribute('path') !== null) {
+                        if (e.target.getAttribute('title') !== null) {
                             containerNode.remove();
                             containerNode = null;
                             self.nodes.selectFolderBtn.classList.add('not-active');
-                            if(e.target.getAttribute('path') == '..')
+                            if(e.target.getAttribute('title') == '..')
                                 self.pathList.pop()
                             else
-                                self.pathList.push(e.target.getAttribute('path'))
+                                self.pathList.push({
+                                    id: e.target.getAttribute('data-item-id'),
+                                    title: e.target.getAttribute('title'),
+                                })
                             self.update();
                         }
                     } catch (e) {
@@ -100,17 +110,18 @@ FolderWalker.prototype = {
             backLine = document.createElement('div');
             backLine.className = 'folder-line ' + 'back-line';
             backLine.textContent = '..';
-            backLine.setAttribute('path', "..");
+            backLine.setAttribute('title', "..");
             containerNode.appendChild(backLine);
         }
 
         if (folders.length) {
             for (var i = 0; i < folders.length; i++) {
                 folder = folders[i];
+                folder.title = folder.title || folder.name
                 folderNode = document.createElement('div');
                 folderNode.className = 'folder-line';
                 folderNode.textContent = folder.title;
-                folderNode.setAttribute('path', folder.title);
+                folderNode.setAttribute('title', folder.title);
                 folderNode.setAttribute('data-item-id', folder.id);
                 containerNode.appendChild(folderNode);
             }
@@ -162,11 +173,11 @@ FolderWalker.prototype = {
         home.target = 0
         this.nodes.breadCrumbs.appendChild(home)
         for (let idx = 0; idx < this.pathList.length; idx++) {
-            const path = this.pathList[idx];
+            const node = this.pathList[idx];
             var a = document.createElement('a')
             var span = document.createElement('span')
             span.innerText = "/"
-            a.innerText = path
+            a.innerText = node.title
             a.target = idx + 1
             this.nodes.breadCrumbs.appendChild(span)
             this.nodes.breadCrumbs.appendChild(a)
@@ -201,7 +212,7 @@ FolderWalker.prototype = {
                 if (folders && folders.length) {
                     Array.prototype.forEach.call(folders, function (folder) {
                         if (folder.classList.contains('selected')) {
-                            var title = folder.getAttribute('path');
+                            var title = folder.getAttribute('title');
                             var folderId = folder.getAttribute('data-item-id');
                             if (folderId === 'null') {
                                 folderId = '';
