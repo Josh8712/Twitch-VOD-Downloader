@@ -195,7 +195,7 @@ class YoutubeStorage extends CloudStorage {
     findPlayList(token, pageToken=null) {
         var url = "https://www.googleapis.com/youtube/v3/playlists?mine=true&maxResults=50&part=snippet&part=id"
         if(pageToken)
-            url += "&pageToken" + pageToken
+            url += "&pageToken=" + pageToken
         return fetch(url, {
             method: 'GET',
             headers: {
@@ -275,7 +275,7 @@ class YoutubeStorage extends CloudStorage {
     findPlayListItems(token, id, items, pageToken=null) {
         var url = "https://www.googleapis.com/youtube/v3/playlistItems?maxResults=50&part=snippet&part=id&part=contentDetails&playlistId=" + id
         if(pageToken)
-            url += "&pageToken" + pageToken
+            url += "&pageToken=" + pageToken
         return fetch(url, {
             method: 'GET',
             headers: {

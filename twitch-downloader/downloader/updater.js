@@ -1,4 +1,4 @@
-var version = 'v0.1.0'
+var version = 'v0.1.1'
 var changeLogURL = "https://raw.githubusercontent.com/Josh8712/Twitch-VOD-Downloader/master/changelog"
 function chech_update() {
     fetch(changeLogURL + "?time=" + new Date().getTime())

@@ -1,12 +1,16 @@
 {
-    "manifest_version": 3,
-    "name": "Twitch Streaming Recorder",
-    "description": "Streaming Recorder for Twitch",
-    "version": "0.1.0",
-    "action": {
+   "manifest_version": 3,
+   "name": "Twitch Streaming Recorder",
+   "description": "Streaming Recorder for Twitch",
+   "version": "0.1.1",
+   "icons": {
+      "48": "assets/icon-48.png",
+      "128": "assets/icon-128.png"
+   },
+   "action": {
       "default_popup": "popup/popup.html"
-    },
-    "background": {  
+   },
+   "background": {
       "service_worker": "background.js"
     },  
     "host_permissions": [
@@ -18,26 +22,26 @@
     ],
     "permissions": [
       "background", 
-      "notifications",
-      "alarms",
-      "storage",
-      "tabs",
-      "cookies",
-      "webRequest",
-      "identity"
-    ],
-    "oauth2": {
+      "notifications", 
+      "alarms", 
+      "storage", 
+      "tabs", 
+      "cookies", 
+      "webRequest", 
+      "identity" 
+   ],
+   "oauth2": {
       "client_id": "981220008427-vgjkqepmhcvc7o7oc8ljg0fq2qesgo07.apps.googleusercontent.com",
-      "scopes": [
-        "https://www.googleapis.com/auth/drive.file",
-        "https://www.googleapis.com/auth/drive.metadata"
+      "scopes": [ 
+         "https://www.googleapis.com/auth/drive.file",
+         "https://www.googleapis.com/auth/drive.metadata" 
       ]
-    },
-    "content_scripts": [
+   },
+   "content_scripts": [ 
       {
-          "matches": ["https://*.twitch.tv/*"],
-          "js": ["content/click.js"],
-          "run_at": "document_start"
-      }
-    ]
+         "matches": ["https://*.twitch.tv/*"],
+         "js": ["content/click.js"],
+         "run_at": "document_start"
+      } 
+   ]
 }

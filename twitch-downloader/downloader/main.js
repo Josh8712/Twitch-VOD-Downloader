@@ -185,7 +185,6 @@ function start() {
         dest.cleanup()
     if (dest.handler.btn)
         delete dest.handler.btn
-    debugger
     set('dest', dest)
     document.querySelector('.banner h1').innerText = channel_name + " VOD Downloader"
     downloader = new Downloader(auth_token, channel_name, quality, dest, interval, output_type, output_length)
